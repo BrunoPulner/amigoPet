@@ -29,6 +29,7 @@ export type CreatePetPayload = {
   fleaTickTreatment: boolean;
   vaccines: VaccineItemPayload[];
   images: File[];
+  trackingCode?: string;
 };
 
 async function uploadPetImages(files: File[], collectionName: string, petId: string) {
@@ -92,6 +93,7 @@ export async function createPet(payload: CreatePetPayload) {
     waitingSince: payload.waitingSince,
 
     castrated: payload.castrated,
+    trackingCode: payload.trackingCode?.trim(),
     featured: payload.featured,
 
     images,
@@ -107,5 +109,6 @@ export async function createPet(payload: CreatePetPayload) {
     petId,
     collectionName,
     vaccinationCardId,
+    trackingCode: payload.trackingCode ?? "",
   };
 }

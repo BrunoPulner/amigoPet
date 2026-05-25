@@ -52,7 +52,7 @@ export function Header() {
     }`;
 
   const mobileLinkClass = (path: string) =>
-    `flex h-16 w-full max-w-sm items-center justify-center rounded-2xl text-center text-2xl font-black transition ${
+    `mx-auto flex h-16 w-full max-w-sm items-center justify-center rounded-2xl text-center text-2xl font-black transition ${
       isActive(path)
         ? "bg-white text-emerald-700 shadow-xl"
         : "bg-white/10 text-white backdrop-blur hover:bg-white/20"
@@ -64,17 +64,13 @@ export function Header() {
         <Link
           to="/"
           onClick={closeMenu}
-          className="flex items-center gap-3 transition hover:opacity-90"
+          className="flex h-16 items-center overflow-hidden transition hover:opacity-90"
         >
-          <div className="flex flex-col leading-none">
-            <span className="text-2xl font-black tracking-tight">
-              AmigoPet
-            </span>
-
-            <span className="text-xs font-medium text-emerald-100">
-              Rebouças - PR
-            </span>
-          </div>
+          <img
+            src="/logo-gif-att-semfundo.png"
+            alt="Projeto AmigoPet"
+            className="h-full w-auto object-contain"
+          />
         </Link>
 
         <nav className="hidden items-center gap-3 text-sm font-semibold lg:flex">
@@ -85,11 +81,11 @@ export function Header() {
           ))}
 
           <Link
-  to="/login"
-  className="ml-2 inline-flex h-10 items-center justify-center whitespace-nowrap rounded-xl border border-white/10 bg-white/5 px-5 text-sm font-bold text-emerald-50/80 transition hover:bg-white/10 hover:text-white"
->
-  Administrador
-</Link>
+            to="/login"
+            className="ml-2 inline-flex h-10 items-center justify-center whitespace-nowrap rounded-xl border border-white/10 bg-white/5 px-5 text-sm font-bold text-emerald-50/80 transition hover:bg-white/10 hover:text-white"
+          >
+            Administrador
+          </Link>
 
           {signed && (
             <button
@@ -115,7 +111,7 @@ export function Header() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            className="fixed inset-0 z-[999] flex min-h-screen flex-col overflow-hidden bg-emerald-800 px-6 py-6 text-white lg:hidden"
+            className="fixed inset-0 z-[999] flex min-h-dvh flex-col overflow-y-auto bg-emerald-800 px-6 py-6 text-white lg:hidden"
             initial={{
               clipPath: "circle(0% at calc(100% - 46px) 40px)",
             }}
@@ -137,7 +133,7 @@ export function Header() {
               transition={{ delay: 0.25, duration: 0.45 }}
             />
 
-            <div className="relative z-10 flex items-center justify-between">
+            <div className="relative z-10 flex shrink-0 items-center justify-between">
               <button
                 type="button"
                 onClick={() => handleMobileNavigate("/")}
@@ -163,7 +159,7 @@ export function Header() {
             </div>
 
             <motion.nav
-              className="relative z-10 flex flex-1 flex-col items-center justify-center gap-5 px-2"
+              className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-5 px-2 py-8"
               initial="hidden"
               animate="visible"
               variants={{
@@ -226,17 +222,17 @@ export function Header() {
                   },
                 }}
               >
-                 <button
-    type="button"
-    onClick={() => handleMobileNavigate("/login")}
-    className="flex h-14 w-full max-w-sm items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-center text-lg font-black text-emerald-50 backdrop-blur transition hover:bg-white/20"
-  >
-    Área administrativa
-  </button>
+                <button
+                  type="button"
+                  onClick={() => handleMobileNavigate("/login")}
+                  className="mx-auto flex h-14 w-full max-w-sm items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-center text-lg font-black text-emerald-50 backdrop-blur transition hover:bg-white/20"
+                >
+                  Área administrativa
+                </button>
 
-   <p className="mx-auto mt-3 max-w-sm text-center text-xs font-semibold text-emerald-100/80">
-    Acesso restrito para usuários autorizados.
-  </p>
+                <p className="mx-auto mt-3 max-w-sm text-center text-xs font-semibold text-emerald-100/80">
+                  Acesso restrito para usuários autorizados.
+                </p>
               </motion.div>
 
               {signed && (
@@ -262,7 +258,7 @@ export function Header() {
                   <button
                     type="button"
                     onClick={handleMobileLogout}
-                    className="flex h-16 w-full max-w-sm items-center justify-center rounded-2xl bg-red-500 text-center text-2xl font-black text-white shadow-xl transition hover:bg-red-400"
+                    className="mx-auto flex h-16 w-full max-w-sm items-center justify-center rounded-2xl bg-red-500 text-center text-2xl font-black text-white shadow-xl transition hover:bg-red-400"
                   >
                     Sair
                   </button>
@@ -271,7 +267,7 @@ export function Header() {
             </motion.nav>
 
             <motion.p
-              className="relative z-10 pb-4 text-center text-sm font-medium text-emerald-100"
+              className="relative z-10 shrink-0 pb-4 text-center text-sm font-medium text-emerald-100"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.75, duration: 0.25 }}

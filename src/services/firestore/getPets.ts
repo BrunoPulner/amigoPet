@@ -23,6 +23,7 @@ export type Pet = {
   images: PetImage[];
   vaccinationCardId: string;
   collectionName: "dogs" | "cats";
+  trackingCode: string;
 };
 
 async function getPetsByCollection(collectionName: "dogs" | "cats") {
@@ -49,6 +50,7 @@ async function getPetsByCollection(collectionName: "dogs" | "cats") {
       images: data.images ?? [],
       vaccinationCardId: data.vaccinationCardId ?? "",
       collectionName,
+      trackingCode: data.trackingCode ?? "",
     } as Pet;
   });
 }

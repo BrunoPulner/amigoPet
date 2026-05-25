@@ -57,7 +57,7 @@ export function AboutAdoption() {
           <div className="relative z-10 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
               <span className="inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-50 backdrop-blur">
-                🐾 Adoção responsável
+                 Adoção responsável
               </span>
 
               <h1 className="mt-5 max-w-3xl break-words text-3xl font-black leading-tight text-white sm:text-4xl md:text-5xl">

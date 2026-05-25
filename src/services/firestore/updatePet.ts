@@ -9,6 +9,7 @@ export type UpdatePetPayload = {
   petId: string;
   collectionName: "dogs" | "cats";
   vaccinationCardId: string;
+  trackingCode: string;
 
   name: string;
   species: Species;
@@ -72,6 +73,7 @@ export async function updatePet(payload: UpdatePetPayload) {
     size: payload.size,
     age: payload.age,
     description: payload.description,
+     trackingCode: payload.trackingCode.trim(),
     status: payload.status,
     waitingSince: payload.waitingSince,
     castrated: payload.castrated,
@@ -90,11 +92,13 @@ export async function updatePet(payload: UpdatePetPayload) {
     hasVaccines: payload.vaccines.length > 0,
     vaccines: payload.vaccines,
     updatedAt: serverTimestamp(),
+   
   });
 
   return {
     petId: payload.petId,
     collectionName: payload.collectionName,
     vaccinationCardId: payload.vaccinationCardId,
+    
   };
 }

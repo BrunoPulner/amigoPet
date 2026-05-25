@@ -34,6 +34,7 @@ type ImagePreview = {
 
 export function NewPet() {
   const [name, setName] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
   const [age, setAge] = useState("");
   const [description, setDescription] = useState("");
   const [waitingSince, setWaitingSince] = useState("");
@@ -121,7 +122,7 @@ function removeImage(id: string) {
 
 
 async function handleSavePet() {
-  if (!name || !age || !description || !waitingSince) {
+  if (!name || !trackingCode || !age || !description || !waitingSince) {
     setErrorMessage("Preencha todos os campos obrigatórios do cadastro.");
     return;
   }
@@ -160,7 +161,8 @@ async function handleSavePet() {
       dewormed,
       fleaTickTreatment,
       vaccines: validVaccines,
-        images: images.map((image) => image.file),
+      trackingCode,
+      images: images.map((image) => image.file),
     });
 
     toast.success("Pet cadastrado com sucesso!");
@@ -239,6 +241,24 @@ async function handleSavePet() {
                     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
                   />
                 </label>
+
+                <label className="block md:col-span-2">
+  <span className="mb-2 block text-sm font-black text-zinc-700">
+    Código de rastreio *
+  </span>
+
+  <input
+    type="text"
+    placeholder="Ex: RB-2026-0001, CHIP-123456..."
+    value={trackingCode}
+    onChange={(e) => setTrackingCode(e.target.value)}
+    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
+  />
+
+  <p className="mt-2 text-xs font-semibold text-zinc-500">
+    Informação interna. Este código não será exibido para os usuários.
+  </p>
+</label>
 
                 <label className="block">
                   <span className="mb-2 block text-sm font-black text-zinc-700">

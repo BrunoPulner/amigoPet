@@ -56,11 +56,11 @@ export function Home() {
 
             <div className="animate-hero-reveal delay-hero-5 mt-8 flex max-w-xl flex-wrap gap-3">
               <span className="rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur">
-                🐾 Adoção gratuita
+                 Adoção gratuita
               </span>
 
               <span className="rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur">
-                ❤️ Projeto beneficente
+                 Projeto beneficente
               </span>
 
               <span className="rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur">

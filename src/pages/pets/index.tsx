@@ -86,7 +86,7 @@ export function Pets() {
           <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <span className="inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-50 backdrop-blur">
-                🐾 Adoção responsável
+                 Adoção responsável
               </span>
 
               <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight md:text-5xl">

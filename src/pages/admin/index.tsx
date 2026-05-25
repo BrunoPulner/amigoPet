@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiEdit, FiLogOut, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiEdit, FiLogOut, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 
 import { AuthContext } from "../../contexts/auth-context";
 import { getPets, type Pet } from "../../services/firestore/getPets";
@@ -26,6 +26,7 @@ export function Admin() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   async function loadPets() {
     try {
@@ -49,61 +50,77 @@ export function Admin() {
   }
 
   async function handleDeletePet(pet: Pet) {
-  toast.warning(
-    ({ closeToast }) => (
-      <div>
-        <strong>Excluir {pet.name}?</strong>
+    toast.warning(
+      ({ closeToast }) => (
+        <div>
+          <strong>Excluir {pet.name}?</strong>
 
-        <p className="mt-2 text-sm">
-          Essa ação removerá o pet, imagens e carteirinha.
-        </p>
+          <p className="mt-2 text-sm">
+            Essa ação removerá o pet, imagens e carteirinha.
+          </p>
 
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={async () => {
-              closeToast?.();
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                closeToast?.();
 
-              try {
-                setDeletingId(pet.id);
+                try {
+                  setDeletingId(pet.id);
 
-                await deletePet(pet);
+                  await deletePet(pet);
 
-                setPets((prev) => prev.filter((item) => item.id !== pet.id));
+                  setPets((prev) => prev.filter((item) => item.id !== pet.id));
 
-                toast.success("Pet excluído com sucesso!");
-              } catch (error) {
-                console.log(error);
-                toast.error("Erro ao excluir o pet.");
-              } finally {
-                setDeletingId("");
-              }
-            }}
-            className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white"
-          >
-            Sim, excluir
-          </button>
+                  toast.success("Pet excluído com sucesso!");
+                } catch (error) {
+                  console.log(error);
+                  toast.error("Erro ao excluir o pet.");
+                } finally {
+                  setDeletingId("");
+                }
+              }}
+              className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white"
+            >
+              Sim, excluir
+            </button>
 
-          <button
-            type="button"
-            onClick={closeToast}
-            className="rounded-lg bg-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700"
-          >
-            Cancelar
-          </button>
+            <button
+              type="button"
+              onClick={closeToast}
+              className="rounded-lg bg-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
-      </div>
-    ),
-    {
-      autoClose: false,
-      closeOnClick: false,
-      draggable: false,
-    }
-  );
-}
+      ),
+      {
+        autoClose: false,
+        closeOnClick: false,
+        draggable: false,
+      }
+    );
+  }
 
   const availablePets = pets.filter((pet) => pet.status === "available").length;
   const adoptedPets = pets.filter((pet) => pet.status === "adopted").length;
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredPets = pets.filter((pet) => {
+    const name = pet.name.toLowerCase();
+    const trackingCode = pet.trackingCode?.toLowerCase() ?? "";
+    const species = getSpeciesLabel(pet.species).toLowerCase();
+    const status = getStatusLabel(pet.status).toLowerCase();
+
+    return (
+      name.includes(normalizedSearch) ||
+      trackingCode.includes(normalizedSearch) ||
+      species.includes(normalizedSearch) ||
+      status.includes(normalizedSearch)
+    );
+  });
 
   return (
     <main className="min-h-[calc(100vh-80px)] bg-[#f4eadc] px-6 py-10">
@@ -191,6 +208,25 @@ export function Admin() {
             </div>
           </div>
 
+          <div className="mb-6">
+            <div className="flex h-14 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 transition focus-within:border-emerald-500 focus-within:bg-white">
+              <FiSearch className="text-xl text-emerald-700" />
+
+              <input
+                type="text"
+                placeholder="Buscar por nome, código de rastreio, espécie ou status..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="h-full flex-1 bg-transparent text-base font-semibold text-zinc-800 outline-none placeholder:text-zinc-400"
+              />
+            </div>
+
+            <p className="mt-2 text-xs font-semibold text-zinc-500">
+              O código de rastreio é uma informação interna e aparece somente no
+              painel administrativo.
+            </p>
+          </div>
+
           {loading ? (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((item) => (
@@ -200,19 +236,23 @@ export function Admin() {
                 />
               ))}
             </div>
-          ) : pets.length === 0 ? (
+          ) : filteredPets.length === 0 ? (
             <div className="rounded-[2rem] bg-zinc-50 p-10 text-center">
               <h3 className="text-2xl font-black text-emerald-950">
-                Nenhum pet cadastrado ainda
+                {pets.length === 0
+                  ? "Nenhum pet cadastrado ainda"
+                  : "Nenhum pet encontrado"}
               </h3>
 
               <p className="mt-2 text-sm font-semibold text-zinc-500">
-                Clique em cadastrar novo pet para iniciar.
+                {pets.length === 0
+                  ? "Clique em cadastrar novo pet para iniciar."
+                  : "Tente buscar por outro nome ou código de rastreio."}
               </p>
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {pets.map((pet, index) => {
+              {filteredPets.map((pet, index) => {
                 const mainImage = pet.images?.[0]?.url;
 
                 return (
@@ -249,6 +289,12 @@ export function Admin() {
                       <h3 className="text-2xl font-black text-emerald-950">
                         {pet.name}
                       </h3>
+
+                      {pet.trackingCode && (
+                        <p className="mt-1 text-xs font-black uppercase tracking-wide text-emerald-700">
+                          Código: {pet.trackingCode}
+                        </p>
+                      )}
 
                       <p className="mt-2 line-clamp-2 text-sm font-semibold leading-relaxed text-zinc-600">
                         {pet.description}

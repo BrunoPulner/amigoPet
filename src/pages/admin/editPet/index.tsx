@@ -44,6 +44,7 @@ export function EditPet() {
     useState<VaccinationCard | null>(null);
 
   const [name, setName] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
   const [age, setAge] = useState("");
   const [description, setDescription] = useState("");
   const [waitingSince, setWaitingSince] = useState("");
@@ -89,6 +90,7 @@ export function EditPet() {
         setVaccinationCard(data.vaccinationCard);
 
         setName(data.pet.name);
+        setTrackingCode(data.pet.trackingCode ?? "");
         setAge(data.pet.age);
         setDescription(data.pet.description);
         setWaitingSince(data.pet.waitingSince);
@@ -192,7 +194,7 @@ export function EditPet() {
       return;
     }
 
-    if (!name || !age || !description || !waitingSince) {
+    if (!name || !trackingCode || !age || !description || !waitingSince) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -222,6 +224,7 @@ export function EditPet() {
         vaccinationCardId: vaccinationCard.id,
 
         name,
+        trackingCode,
         species,
         gender,
         size,
@@ -237,6 +240,7 @@ export function EditPet() {
 
         existingImages,
         newImages: newImages.map((image) => image.file),
+        
       });
 
       toast.success("Pet atualizado com sucesso!");
@@ -325,6 +329,24 @@ export function EditPet() {
                     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
                   />
                 </label>
+
+                <label className="block md:col-span-2">
+  <span className="mb-2 block text-sm font-black text-zinc-700">
+    Código de rastreio *
+  </span>
+
+  <input
+    type="text"
+    placeholder="Ex: RB-2026-0001, CHIP-123456..."
+    value={trackingCode}
+    onChange={(e) => setTrackingCode(e.target.value)}
+    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
+  />
+
+  <p className="mt-2 text-xs font-semibold text-zinc-500">
+    Informação interna. Este código não será exibido para os usuários.
+  </p>
+</label>
 
                 <label className="block">
                   <span className="mb-2 block text-sm font-black text-zinc-700">
