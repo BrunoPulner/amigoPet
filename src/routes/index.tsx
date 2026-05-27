@@ -1,44 +1,88 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { useContext } from "react";
+import { Suspense, lazy, useContext } from "react";
 
 import { Layout } from "../components/layout";
-
 import { AuthContext } from "../contexts/auth-context";
-
-import { Home } from "../pages/home";
-import { Pets } from "../pages/pets";
-import { PetDetails } from "../pages/petDetails";
-import { AboutAdoption } from "../pages/aboutAdoption";
-
-import { Login } from "../pages/login";
-
 import { ScrollToTop } from "../components/scrollToTop";
 
-import { Admin } from "../pages/admin";
-import { NewPet } from "../pages/admin/newPet";
-import { EditPet } from "../pages/admin/editPet";
-import { Microchips } from "../pages/admin/microchips";
+import { RouteLoading } from "../components/routeLoading";
 
-function Private({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const Home = lazy(() =>
+  import("../pages/home").then((module) => ({ default: module.Home }))
+);
+
+const Pets = lazy(() =>
+  import("../pages/pets").then((module) => ({ default: module.Pets }))
+);
+
+const PetDetails = lazy(() =>
+  import("../pages/petDetails").then((module) => ({
+    default: module.PetDetails,
+  }))
+);
+
+const AboutAdoption = lazy(() =>
+  import("../pages/aboutAdoption").then((module) => ({
+    default: module.AboutAdoption,
+  }))
+);
+
+const Login = lazy(() =>
+  import("../pages/login").then((module) => ({ default: module.Login }))
+);
+
+const Admin = lazy(() =>
+  import("../pages/admin").then((module) => ({ default: module.Admin }))
+);
+
+const NewPet = lazy(() =>
+  import("../pages/admin/newPet").then((module) => ({
+    default: module.NewPet,
+  }))
+);
+
+const EditPet = lazy(() =>
+  import("../pages/admin/editPet").then((module) => ({
+    default: module.EditPet,
+  }))
+);
+
+const Microchips = lazy(() =>
+  import("../pages/admin/microchips").then((module) => ({
+    default: module.Microchips,
+  }))
+);
+
+function PageLoading() {
+  return (
+    <main className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-[#f4eadc]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-14 w-14 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+
+        <p className="text-lg font-black text-emerald-900">
+          Carregando página...
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function Private({ children }: { children: React.ReactNode }) {
   const { signed, loadingAuth } = useContext(AuthContext);
 
   if (loadingAuth) {
-    return (
-      <main className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-[#f4eadc]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-14 w-14 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+  return (
+    <main className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-[#f4eadc]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-14 w-14 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
 
-          <p className="text-lg font-black text-emerald-900">
-            Verificando autenticação...
-          </p>
-        </div>
-      </main>
-    );
-  }
+        <p className="text-lg font-black text-emerald-900">
+          Verificando autenticação...
+        </p>
+      </div>
+    </main>
+  );
+}
 
   if (!signed) {
     return <Navigate to="/login" replace />;
@@ -50,61 +94,62 @@ function Private({
 export function AppRoutes() {
   return (
     <BrowserRouter>
-    <ScrollToTop />
-      <Routes>
-        <Route element={<Layout />}>
-          {/* PUBLIC */}
-          <Route path="/" element={<Home />} />
+      <ScrollToTop />
+       <RouteLoading />
 
-          <Route path="/pets" element={<Pets />} />
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          <Route element={<Layout />}>
+            {/* PUBLIC */}
+            <Route path="/" element={<Home />} />
 
-          <Route path="/pets/:id" element={<PetDetails />} />
+            <Route path="/pets" element={<Pets />} />
 
-          <Route
-            path="/como-adotar"
-            element={<AboutAdoption />}
-          />
+            <Route path="/pets/:id" element={<PetDetails />} />
 
-          <Route path="/login" element={<Login />} />
+            <Route path="/como-adotar" element={<AboutAdoption />} />
 
-          {/* ADMIN */}
-          <Route
-            path="/admin"
-            element={
-              <Private>
-                <Admin />
-              </Private>
-            }
-          />
+            <Route path="/login" element={<Login />} />
 
-          <Route
-  path="/admin/microchips"
-  element={
-    <Private>
-      <Microchips />
-    </Private>
-  }
-/>
+            {/* ADMIN */}
+            <Route
+              path="/admin"
+              element={
+                <Private>
+                  <Admin />
+                </Private>
+              }
+            />
 
-          <Route
-            path="/admin/pets/new"
-            element={
-              <Private>
-                <NewPet />
-              </Private>
-            }
-          />
+            <Route
+              path="/admin/microchips"
+              element={
+                <Private>
+                  <Microchips />
+                </Private>
+              }
+            />
 
-          <Route
-  path="/admin/pets/edit/:collectionName/:id"
-  element={
-    <Private>
-      <EditPet />
-    </Private>
-  }
-/>
-        </Route>
-      </Routes>
+            <Route
+              path="/admin/pets/new"
+              element={
+                <Private>
+                  <NewPet />
+                </Private>
+              }
+            />
+
+            <Route
+              path="/admin/pets/edit/:collectionName/:id"
+              element={
+                <Private>
+                  <EditPet />
+                </Private>
+              }
+            />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

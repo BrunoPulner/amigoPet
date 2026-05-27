@@ -1,18 +1,39 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export function Home() {
+  const [bannerLoaded, setBannerLoaded] = useState(false);
+
   return (
     <main className="flex flex-col">
       <section className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[#e9e2d7]">
+        {!bannerLoaded && (
+          <div className="absolute inset-0 animate-pulse bg-[#e9e2d7]" />
+        )}
+
         <img
           src="/banner-home.webp"
           alt="Campanha de adoção de animais em Rebouças"
-          className="absolute inset-0 h-full w-full animate-hero-reveal object-cover object-center md:object-cover"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          onLoad={() => setBannerLoaded(true)}
+          className={`absolute inset-0 h-full w-full object-cover object-center transition-all duration-700 ease-out ${
+            bannerLoaded
+              ? "scale-100 opacity-100 blur-0"
+              : "scale-105 opacity-0 blur-sm"
+          }`}
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#f4eadc] via-[#f4eadc]/85 to-transparent md:hidden" />
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[1600px] items-center px-6 py-16 sm:px-10 lg:px-16">
+        <div
+          className={`relative z-10 mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-[1600px] items-center px-6 py-16 transition-all duration-700 sm:px-10 lg:px-16 ${
+            bannerLoaded
+              ? "translate-y-0 opacity-100"
+              : "translate-y-4 opacity-0"
+          }`}
+        >
           <div className="w-full max-w-3xl text-left">
             <span className="animate-text-reveal delay-hero-1 inline-flex max-w-full rounded-full bg-emerald-700 px-5 py-2 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-900/20 sm:text-sm">
               Projeto beneficente de adoção responsável
@@ -41,6 +62,7 @@ export function Home() {
                 className="group inline-flex animate-pulseSoft items-center justify-center rounded-2xl bg-emerald-600 px-8 py-4 text-center text-lg font-black text-white shadow-xl shadow-emerald-900/20 transition hover:-translate-y-1 hover:bg-emerald-500"
               >
                 Ver pets disponíveis
+
                 <span className="ml-2 transition group-hover:translate-x-1">
                   →
                 </span>
@@ -56,11 +78,11 @@ export function Home() {
 
             <div className="animate-hero-reveal delay-hero-5 mt-8 flex max-w-xl flex-wrap gap-3">
               <span className="rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur">
-                 Adoção gratuita
+                Adoção gratuita
               </span>
 
               <span className="rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur">
-                 Projeto beneficente
+                Projeto beneficente
               </span>
 
               <span className="rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur">
