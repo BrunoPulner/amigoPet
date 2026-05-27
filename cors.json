@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["http://localhost:5173", "https://www.amigopet-reboucas.com.br"],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]

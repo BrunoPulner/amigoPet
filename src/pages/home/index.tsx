@@ -5,7 +5,7 @@ export function Home() {
     <main className="flex flex-col">
       <section className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[#e9e2d7]">
         <img
-          src="/banner-home.svg"
+          src="/banner-home.webp"
           alt="Campanha de adoção de animais em Rebouças"
           className="absolute inset-0 h-full w-full animate-hero-reveal object-cover object-center md:object-cover"
         />

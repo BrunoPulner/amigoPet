@@ -19,13 +19,16 @@ import {
 import type { Pet, PetImage } from "../../../services/firestore/getPets";
 import { updatePet } from "../../../services/firestore/updatePet";
 
+import { getBlob, ref } from "firebase/storage";
+import { storage } from "../../../services/firebaseConnection";
+
+import { ImageCropper } from "../../../components/imageCropper";
+import { FiCrop } from "react-icons/fi";
+
 type VaccineItem = {
   id: string;
   name: string;
   dose: string;
-  date: string;
-  nextDoseDate: string;
-  veterinarian: string;
   notes: string;
 };
 
@@ -33,6 +36,7 @@ type ImagePreview = {
   id: string;
   file: File;
   previewUrl: string;
+  order: number;
 };
 
 export function EditPet() {
@@ -45,12 +49,13 @@ export function EditPet() {
 
   const [name, setName] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
-  const [age, setAge] = useState("");
+  const [ageValue, setAgeValue] = useState("");
+const [ageUnit, setAgeUnit] = useState<"months" | "years">("years");
   const [description, setDescription] = useState("");
   const [waitingSince, setWaitingSince] = useState("");
 
   const [species, setSpecies] = useState<"dog" | "cat">("dog");
-  const [gender, setGender] = useState("prince");
+  const [gender, setGender] = useState("macho");
   const [size, setSize] = useState("medium");
   const [status, setStatus] = useState("available");
 
@@ -62,20 +67,51 @@ export function EditPet() {
   const [existingImages, setExistingImages] = useState<PetImage[]>([]);
   const [newImages, setNewImages] = useState<ImagePreview[]>([]);
 
+  const [cropImageUrl, setCropImageUrl] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [editingImageOrder, setEditingImageOrder] = useState<number | null>(null);
+  const [editingImagePath, setEditingImagePath] = useState("");
+
   const [vaccines, setVaccines] = useState<VaccineItem[]>([
     {
       id: crypto.randomUUID(),
       name: "",
       dose: "",
-      date: "",
-      nextDoseDate: "",
-      veterinarian: "",
       notes: "",
     },
   ]);
 
   const [loading, setLoading] = useState(true);
   const [loadingSave, setLoadingSave] = useState(false);
+
+  function parsePetAge(age: string) {
+  const numberMatch = age.match(/\d+/);
+  const value = numberMatch ? numberMatch[0] : "";
+
+  const normalizedAge = age.toLowerCase();
+
+  const unit =
+    normalizedAge.includes("mês") || normalizedAge.includes("mes")
+      ? "months"
+      : "years";
+
+  return {
+    value,
+    unit: unit as "months" | "years",
+  };
+}
+
+function formatPetAge() {
+  const value = Number(ageValue);
+
+  if (!value || value <= 0) return "";
+
+  if (ageUnit === "months") {
+    return `${value} ${value === 1 ? "mês" : "meses"}`;
+  }
+
+  return `${value} ${value === 1 ? "ano" : "anos"}`;
+}
 
   useEffect(() => {
     async function loadPet() {
@@ -91,7 +127,10 @@ export function EditPet() {
 
         setName(data.pet.name);
         setTrackingCode(data.pet.trackingCode ?? "");
-        setAge(data.pet.age);
+        const parsedAge = parsePetAge(data.pet.age || "");
+
+        setAgeValue(parsedAge.value);
+        setAgeUnit(parsedAge.unit);
         setDescription(data.pet.description);
         setWaitingSince(data.pet.waitingSince);
 
@@ -102,7 +141,11 @@ export function EditPet() {
 
         setCastrated(data.pet.castrated);
         setFeatured(data.pet.featured);
-        setExistingImages(data.pet.images ?? []);
+        setExistingImages(
+  [...(data.pet.images ?? [])].sort(
+    (a, b) => (a.order ?? 999) - (b.order ?? 999)
+  )
+);
 
         setDewormed(data.vaccinationCard?.dewormed ?? false);
         setFleaTickTreatment(data.vaccinationCard?.fleaTickTreatment ?? false);
@@ -161,11 +204,14 @@ export function EditPet() {
 
     const filesArray = Array.from(e.target.files);
 
-    const previews = filesArray.map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
+    const currentTotal = existingImages.length + newImages.length;
+
+const previews = filesArray.map((file, index) => ({
+  id: crypto.randomUUID(),
+  file,
+  previewUrl: URL.createObjectURL(file),
+  order: currentTotal + index + 1,
+}));
 
     setNewImages((prev) => [...prev, ...previews]);
 
@@ -188,13 +234,86 @@ export function EditPet() {
     });
   }
 
+  function updateExistingImageOrder(path: string, order: number) {
+  setExistingImages((prev) =>
+    prev.map((image) =>
+      image.path === path ? { ...image, order } : image
+    )
+  );
+}
+
+function updateNewImageOrder(id: string, order: number) {
+  setNewImages((prev) =>
+    prev.map((image) =>
+      image.id === id ? { ...image, order } : image
+    )
+  );
+}
+
+async function handleResizeExistingImage(image: PetImage, index: number) {
+  try {
+    const imageOrder = image.order ?? index + 1;
+
+    const imageRef = ref(storage, image.path);
+    const blob = await getBlob(imageRef);
+
+    const objectUrl = URL.createObjectURL(blob);
+
+    setCropImageUrl(objectUrl);
+    setCropFileName(`pet-${imageOrder}.webp`);
+    setEditingImageOrder(imageOrder);
+    setEditingImagePath(image.path);
+  } catch (error) {
+    console.log(error);
+    alert("Erro ao carregar a imagem para redimensionar.");
+  }
+}
+
+function handleCancelCrop() {
+  if (cropImageUrl.startsWith("blob:")) {
+    URL.revokeObjectURL(cropImageUrl);
+  }
+
+  setCropImageUrl("");
+  setCropFileName("");
+  setEditingImageOrder(null);
+  setEditingImagePath("");
+}
+
+function handleFinishCrop(file: File) {
+  const previewUrl = URL.createObjectURL(file);
+
+  setExistingImages((prev) =>
+    prev.filter((image) => image.path !== editingImagePath)
+  );
+
+  setNewImages((prev) => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      file,
+      previewUrl,
+      order: editingImageOrder ?? existingImages.length + newImages.length + 1,
+    },
+  ]);
+
+  handleCancelCrop();
+}
+
   async function handleSavePet() {
     if (!pet || !vaccinationCard) {
       toast.error("Não foi possível identificar o pet ou a carteirinha.");
       return;
     }
 
-    if (!name || !trackingCode || !age || !description || !waitingSince) {
+    if (
+  !name ||
+  !trackingCode ||
+  !ageValue ||
+  Number(ageValue) <= 0 ||
+  !description ||
+  !waitingSince
+) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -212,11 +331,18 @@ export function EditPet() {
         .map((vaccine) => ({
           name: vaccine.name,
           dose: vaccine.dose,
-          date: vaccine.date,
-          nextDoseDate: vaccine.nextDoseDate,
-          veterinarian: vaccine.veterinarian,
           notes: vaccine.notes,
         }));
+
+        const orderedExistingImages = [...existingImages].sort(
+  (a, b) => (a.order ?? 999) - (b.order ?? 999)
+);
+
+const orderedNewImages = [...newImages].sort(
+  (a, b) => a.order - b.order
+);
+
+  const formattedAge = formatPetAge();
 
       await updatePet({
         petId: pet.id,
@@ -228,7 +354,7 @@ export function EditPet() {
         species,
         gender,
         size,
-        age,
+        age: formattedAge,
         description,
         status,
         waitingSince,
@@ -238,8 +364,8 @@ export function EditPet() {
         fleaTickTreatment,
         vaccines: validVaccines,
 
-        existingImages,
-        newImages: newImages.map((image) => image.file),
+        existingImages: orderedExistingImages,
+newImages: orderedNewImages,
         
       });
 
@@ -332,7 +458,7 @@ export function EditPet() {
 
                 <label className="block md:col-span-2">
   <span className="mb-2 block text-sm font-black text-zinc-700">
-    Código de rastreio *
+    Nº Micro-chip:
   </span>
 
   <input
@@ -379,8 +505,8 @@ export function EditPet() {
                     onChange={(e) => setGender(e.target.value)}
                     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-black text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
                   >
-                    <option value="prince">Príncipe</option>
-                    <option value="princess">Princesa</option>
+                    <option value="macho">Macho</option>
+                    <option value="femea">Fêmea</option>
                   </select>
                 </label>
 
@@ -405,13 +531,25 @@ export function EditPet() {
                     Idade aproximada *
                   </span>
 
-                  <input
-                    type="text"
-                    placeholder="Ex: 2 anos, 6 meses..."
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
-                  />
+                  <div className="grid gap-3 sm:grid-cols-[1fr_90px]">
+  <input
+    type="number"
+    min={1}
+    placeholder="Ex: 6"
+    value={ageValue}
+    onChange={(e) => setAgeValue(e.target.value)}
+    className="h-14 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-base font-black text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-emerald-500 focus:bg-white"
+  />
+
+  <select
+    value={ageUnit}
+    onChange={(e) => setAgeUnit(e.target.value as "months" | "years")}
+    className="h-14 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-base font-black text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
+  >
+    <option value="months">Meses</option>
+    <option value="years">Anos</option>
+  </select>
+</div>
                 </label>
 
                 <label className="block md:col-span-2">
@@ -649,54 +787,6 @@ export function EditPet() {
                         className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500"
                       />
 
-                      <label className="block">
-                        <span className="mb-2 block text-xs font-black text-zinc-500">
-                          Data da aplicação
-                        </span>
-
-                        <input
-                          type="date"
-                          value={vaccine.date}
-                          onChange={(e) =>
-                            updateVaccine(vaccine.id, "date", e.target.value)
-                          }
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500"
-                        />
-                      </label>
-
-                      <label className="block">
-                        <span className="mb-2 block text-xs font-black text-zinc-500">
-                          Próxima dose
-                        </span>
-
-                        <input
-                          type="date"
-                          value={vaccine.nextDoseDate}
-                          onChange={(e) =>
-                            updateVaccine(
-                              vaccine.id,
-                              "nextDoseDate",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500"
-                        />
-                      </label>
-
-                      <input
-                        type="text"
-                        placeholder="Veterinário ou responsável"
-                        value={vaccine.veterinarian}
-                        onChange={(e) =>
-                          updateVaccine(
-                            vaccine.id,
-                            "veterinarian",
-                            e.target.value
-                          )
-                        }
-                        className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500 md:col-span-2"
-                      />
-
                       <textarea
                         placeholder="Observações da vacina..."
                         rows={3}
@@ -724,113 +814,189 @@ export function EditPet() {
 
           <aside className="space-y-8">
             <section className="rounded-[2rem] bg-white p-6 shadow-xl shadow-emerald-900/5">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-2xl">
-                  📸
-                </div>
+  <div className="mb-6 flex items-center gap-3">
+    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-2xl">
+      📸
+    </div>
 
-                <div>
-                  <h2 className="text-2xl font-black text-emerald-950">
-                    Imagens
-                  </h2>
+    <div>
+      <h2 className="text-2xl font-black text-emerald-950">
+        Imagens
+      </h2>
 
-                  <p className="text-sm font-semibold text-zinc-500">
-                    Edite ou adicione fotos do pet.
-                  </p>
-                </div>
+      <p className="text-sm font-semibold text-zinc-500">
+        Defina a ordem das fotos. A imagem número 1 será usada como vitrine.
+      </p>
+    </div>
+  </div>
+
+  <label className="flex h-28 cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-emerald-300 bg-emerald-50/60 px-6 text-center transition hover:bg-emerald-50">
+    <FiCamera className="text-4xl text-emerald-600" />
+
+    <strong className="mt-2 text-base font-black text-emerald-950">
+      Adicionar imagens
+    </strong>
+
+    <span className="mt-1 max-w-xs text-xs font-semibold text-zinc-500">
+      JPG, PNG ou WEBP
+    </span>
+
+   
+
+    <input
+      type="file"
+      accept="image/*"
+      multiple
+      onChange={handleSelectImages}
+      className="hidden"
+    />
+  </label>
+
+  <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    {existingImages.length > 0 || newImages.length > 0 ? (
+      <>
+        {existingImages.map((image, index) => (
+          <div
+            key={`${image.path}-${index}`}
+            className="group overflow-hidden rounded-[1.7rem] bg-white shadow-lg"
+          >
+            <div className="relative overflow-hidden rounded-[1.7rem] bg-zinc-100">
+
+              
+              <img
+                src={image.url}
+                alt={image.name}
+                className="h-64 w-full bg-zinc-100 object-cover transition duration-300 group-hover:scale-105"
+              />
+
+              <button
+  type="button"
+  onClick={() => handleResizeExistingImage(image, index)}
+  className="absolute left-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl transition hover:scale-110 hover:bg-emerald-500"
+  title="Redimensionar imagem"
+>
+  <FiCrop className="text-lg" />
+</button>
+
+
+              <button
+                type="button"
+                onClick={() => removeExistingImage(image.path)}
+                className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white shadow-xl transition hover:scale-110"
+              >
+                <FiTrash2 className="text-lg" />
+              </button>
+
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                <p className="truncate text-sm font-black text-white">
+                  {image.name}
+                </p>
               </div>
+            </div>
 
-              <label className="flex h-28 cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-emerald-300 bg-emerald-50/60 px-6 text-center transition hover:bg-emerald-50">
-                <FiCamera className="text-4xl text-emerald-600" />
+           
 
-                <strong className="mt-2 text-base font-black text-emerald-950">
-                  Adicionar imagens
-                </strong>
-
-                <span className="mt-1 max-w-xs text-xs font-semibold text-zinc-500">
-                  JPG, PNG ou WEBP
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-3 py-3">
+              <label className="flex items-center gap-2">
+                <span className="text-xs font-black text-emerald-950">
+                  Ordem
                 </span>
 
                 <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleSelectImages}
-                  className="hidden"
+                  type="number"
+                  min={1}
+                  value={image.order ?? index + 1}
+                  onChange={(event) =>
+                    updateExistingImageOrder(
+                      image.path,
+                      Number(event.target.value)
+                    )
+                  }
+                  className="h-9 w-16 rounded-full border border-emerald-200 bg-white text-center text-sm font-black text-emerald-800 outline-none focus:border-emerald-500"
                 />
               </label>
 
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                {existingImages.length > 0 || newImages.length > 0 ? (
-                  <>
-                    {existingImages.map((image) => (
-                      <div
-                        key={image.path}
-                        className="group relative overflow-hidden rounded-[1.7rem] bg-zinc-100 shadow-lg"
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className="h-64 w-full bg-zinc-100 object-cover transition duration-300 group-hover:scale-105"
-                        />
+              {(image.order ?? index + 1) === 1 && (
+                <span className="rounded-full bg-orange-500 px-3 py-2 text-xs font-black text-white">
+                  Vitrine
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
 
-                        <button
-                          type="button"
-                          onClick={() => removeExistingImage(image.path)}
-                          className="absolute right-3 top-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white shadow-xl opacity-0 transition group-hover:opacity-100 hover:scale-110"
-                        >
-                          <FiTrash2 className="text-xl" />
-                        </button>
+        {newImages.map((image, index) => (
+          <div
+            key={`${image.id}-${index}`}
+            className="group overflow-hidden rounded-[1.7rem] bg-white shadow-lg"
+          >
+            <div className="relative overflow-hidden rounded-[1.7rem] bg-zinc-100">
+              <img
+                src={image.previewUrl}
+                alt={image.file.name}
+                className="h-64 w-full bg-zinc-100 object-cover transition duration-300 group-hover:scale-105"
+              />
 
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition group-hover:opacity-100">
-                          <p className="truncate text-sm font-black text-white">
-                            {image.name}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
 
-                    {newImages.map((image) => (
-                      <div
-                        key={image.id}
-                        className="group relative overflow-hidden rounded-[1.7rem] bg-zinc-100 shadow-lg"
-                      >
-                        <img
-                          src={image.previewUrl}
-                          alt={image.file.name}
-                          className="h-64 w-full bg-zinc-100 object-cover transition duration-300 group-hover:scale-105"
-                        />
 
-                        <button
-                          type="button"
-                          onClick={() => removeNewImage(image.id)}
-                          className="absolute right-3 top-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white shadow-xl opacity-0 transition group-hover:opacity-100 hover:scale-110"
-                        >
-                          <FiTrash2 className="text-xl" />
-                        </button>
+              <button
+                type="button"
+                onClick={() => removeNewImage(image.id)}
+                className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white shadow-xl transition hover:scale-110"
+              >
+                <FiTrash2 className="text-lg" />
+              </button>
 
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition group-hover:opacity-100">
-                          <p className="truncate text-sm font-black text-white">
-                            {image.file.name}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    {[1, 2].map((item) => (
-                      <div
-                        key={item}
-                        className="flex h-64 items-center justify-center rounded-[1.7rem] border border-zinc-200 bg-zinc-50 text-zinc-300"
-                      >
-                        <FiImage className="text-6xl" />
-                      </div>
-                    ))}
-                  </>
-                )}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                <p className="truncate text-sm font-black text-white">
+                  {image.file.name}
+                </p>
               </div>
-            </section>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-3 py-3">
+              <label className="flex items-center gap-2">
+                <span className="text-xs font-black text-emerald-950">
+                  Ordem
+                </span>
+
+                <input
+                  type="number"
+                  min={1}
+                  value={image.order}
+                  onChange={(event) =>
+                    updateNewImageOrder(
+                      image.id,
+                      Number(event.target.value)
+                    )
+                  }
+                  className="h-9 w-16 rounded-full border border-emerald-200 bg-white text-center text-sm font-black text-emerald-800 outline-none focus:border-emerald-500"
+                />
+              </label>
+
+              {image.order === 1 && (
+                <span className="rounded-full bg-orange-500 px-3 py-2 text-xs font-black text-white">
+                  Vitrine
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </>
+    ) : (
+      <>
+        {[1, 2].map((item) => (
+          <div
+            key={item}
+            className="flex h-64 items-center justify-center rounded-[1.7rem] border border-zinc-200 bg-zinc-50 text-zinc-300"
+          >
+            <FiImage className="text-6xl" />
+          </div>
+        ))}
+      </>
+    )}
+  </div>
+</section>
 
             <section className="rounded-[2rem] bg-emerald-700 p-6 text-white shadow-xl shadow-emerald-900/10">
               <h2 className="text-2xl font-black">Resumo do pet</h2>
@@ -850,7 +1016,7 @@ export function EditPet() {
                 <p>
                   Idade:{" "}
                   <strong className="text-white">
-                    {age || "Não informada"}
+                    {formatPetAge() || "Não informada"}
                   </strong>
                 </p>
 
@@ -881,6 +1047,15 @@ export function EditPet() {
           </aside>
         </form>
       </section>
+
+      {cropImageUrl && (
+  <ImageCropper
+    imageUrl={cropImageUrl}
+    fileName={cropFileName}
+    onCancel={handleCancelCrop}
+    onCropComplete={handleFinishCrop}
+  />
+)}
     </main>
   );
 }

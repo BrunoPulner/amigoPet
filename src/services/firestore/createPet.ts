@@ -1,6 +1,8 @@
 import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
+import { resizeImage } from "../../utils/resizeImage";
+
 import { db, storage } from "../firebaseConnection";
 
 export type Species = "dog" | "cat";
@@ -8,9 +10,6 @@ export type Species = "dog" | "cat";
 export type VaccineItemPayload = {
   name: string;
   dose: string;
-  date: string;
-  nextDoseDate: string;
-  veterinarian: string;
   notes: string;
 };
 
@@ -32,20 +31,52 @@ export type CreatePetPayload = {
   trackingCode?: string;
 };
 
-async function uploadPetImages(files: File[], collectionName: string, petId: string) {
+async function uploadPetImages(
+  files: File[],
+  collectionName: string,
+  petId: string
+) {
   const uploadedImages = await Promise.all(
-    files.map(async (file) => {
-      const imagePath = `${collectionName}/${petId}/${Date.now()}-${file.name}`;
-      const imageRef = ref(storage, imagePath);
+    files.map(async (file, index) => {
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/\s+/g, "-").toLowerCase();
 
-      await uploadBytes(imageRef, file);
+      const originalFile = file;
+      const mediumFile = await resizeImage(file, 900, 0.82);
+      const thumbnailFile = await resizeImage(file, 480, 0.72);
 
-      const url = await getDownloadURL(imageRef);
+      const originalPath = `${collectionName}/${petId}/original/${timestamp}-${safeName}`;
+      const mediumPath = `${collectionName}/${petId}/medium/${timestamp}-${safeName}`;
+      const thumbnailPath = `${collectionName}/${petId}/thumbnail/${timestamp}-${safeName}`;
+
+      const originalRef = ref(storage, originalPath);
+      const mediumRef = ref(storage, mediumPath);
+      const thumbnailRef = ref(storage, thumbnailPath);
+
+      await Promise.all([
+        uploadBytes(originalRef, originalFile),
+        uploadBytes(mediumRef, mediumFile),
+        uploadBytes(thumbnailRef, thumbnailFile),
+      ]);
+
+      const [url, mediumUrl, thumbnailUrl] = await Promise.all([
+        getDownloadURL(originalRef),
+        getDownloadURL(mediumRef),
+        getDownloadURL(thumbnailRef),
+      ]);
 
       return {
-        name: file.name,
-        path: imagePath,
+        name: safeName,
+        path: originalPath,
         url,
+
+        mediumPath,
+        mediumUrl,
+
+        thumbnailPath,
+        thumbnailUrl,
+
+        order: index + 1,
       };
     })
   );

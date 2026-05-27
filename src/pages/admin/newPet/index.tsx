@@ -16,13 +16,12 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { createPet } from "../../../services/firestore/createPet";
 
+import { ImageCropper } from "../../../components/imageCropper";
+
 type VaccineItem = {
   id: string;
   name: string;
   dose: string;
-  date: string;
-  nextDoseDate: string;
-  veterinarian: string;
   notes: string;
 };
 
@@ -35,9 +34,14 @@ type ImagePreview = {
 export function NewPet() {
   const [name, setName] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
-  const [age, setAge] = useState("");
+  const [ageValue, setAgeValue] = useState("");
+  const [ageUnit, setAgeUnit] = useState<"months" | "years">("months");
   const [description, setDescription] = useState("");
   const [waitingSince, setWaitingSince] = useState("");
+
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [cropImageUrl, setCropImageUrl] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
 
   const [species, setSpecies] = useState("dog");
   const [gender, setGender] = useState("prince");
@@ -48,7 +52,7 @@ export function NewPet() {
 
 const [images, setImages] = useState<ImagePreview[]>([]);
 const [loadingSave, setLoadingSave] = useState(false);
-const [, setErrorMessage] = useState("");
+const [errorMessage, setErrorMessage] = useState("");
 
   const [castrated, setCastrated] = useState(false);
   const [featured, setFeatured] = useState(false);
@@ -60,9 +64,6 @@ const [, setErrorMessage] = useState("");
       id: crypto.randomUUID(),
       name: "",
       dose: "",
-      date: "",
-      nextDoseDate: "",
-      veterinarian: "",
       notes: "",
     },
   ]);
@@ -74,9 +75,6 @@ const [, setErrorMessage] = useState("");
         id: crypto.randomUUID(),
         name: "",
         dose: "",
-        date: "",
-        nextDoseDate: "",
-        veterinarian: "",
         notes: "",
       },
     ]);
@@ -92,20 +90,57 @@ const [, setErrorMessage] = useState("");
     );
   }
 
-  function handleSelectImages(e: React.ChangeEvent<HTMLInputElement>) {
-  if (!e.target.files) return;
+ function openNextCrop(files: File[]) {
+  const nextFile = files[0];
 
-  const filesArray = Array.from(e.target.files);
+  if (!nextFile) {
+    setCropImageUrl("");
+    setCropFileName("");
+    setCropQueue([]);
+    return;
+  }
 
-  const previews = filesArray.map((file) => ({
-    id: crypto.randomUUID(),
-    file,
-    previewUrl: URL.createObjectURL(file),
-  }));
+  setCropFileName(nextFile.name);
+  setCropImageUrl(URL.createObjectURL(nextFile));
 
-  setImages((prev) => [...prev, ...previews]);
+  setCropQueue(files.slice(1));
+}
+
+function handleSelectImages(e: React.ChangeEvent<HTMLInputElement>) {
+  const files = Array.from(e.target.files ?? []);
+
+  if (files.length === 0) return;
+
+  openNextCrop(files);
 
   e.target.value = "";
+}
+
+function handleCancelCrop() {
+  if (cropImageUrl) {
+    URL.revokeObjectURL(cropImageUrl);
+  }
+
+  openNextCrop(cropQueue);
+}
+
+function handleFinishCrop(file: File) {
+  const previewUrl = URL.createObjectURL(file);
+
+  setImages((prev) => [
+    ...prev,
+    {
+      id: crypto.randomUUID(),
+      file,
+      previewUrl,
+    },
+  ]);
+
+  if (cropImageUrl) {
+    URL.revokeObjectURL(cropImageUrl);
+  }
+
+  openNextCrop(cropQueue);
 }
 
 function removeImage(id: string) {
@@ -120,14 +155,28 @@ function removeImage(id: string) {
   });
 }
 
+function formatPetAge() {
+  const value = Number(ageValue);
+
+  if (!value || value <= 0) return "";
+
+  if (ageUnit === "months") {
+    return `${value} ${value === 1 ? "mês" : "meses"}`;
+  }
+
+  return `${value} ${value === 1 ? "ano" : "anos"}`;
+}
+
 
 async function handleSavePet() {
-  if (!name || !trackingCode || !age || !description || !waitingSince) {
+  if (!name || !ageValue || Number(ageValue) <= 0 || !description || !waitingSince) {
+    toast.warning("Preencha todos os campos obrigatórios do cadastro.");
     setErrorMessage("Preencha todos os campos obrigatórios do cadastro.");
     return;
   }
 
   if (images.length === 0) {
+    toast.warning("Adicione pelo menos uma imagem do pet.");
     setErrorMessage("Adicione pelo menos uma imagem do pet.");
     return;
   }
@@ -141,27 +190,26 @@ async function handleSavePet() {
       .map((vaccine) => ({
         name: vaccine.name,
         dose: vaccine.dose,
-        date: vaccine.date,
-        nextDoseDate: vaccine.nextDoseDate,
-        veterinarian: vaccine.veterinarian,
         notes: vaccine.notes,
       }));
 
+    const formattedAge = formatPetAge();
+
     await createPet({
-      name,
+      name: name.trim(),
       species: species as "dog" | "cat",
       gender,
       size,
-      age,
-      description,
+      age: formattedAge,
+      description: description.trim(),
       status,
-      waitingSince,
+      waitingSince: waitingSince.trim(),
       castrated,
       featured,
       dewormed,
       fleaTickTreatment,
       vaccines: validVaccines,
-      trackingCode,
+      trackingCode: trackingCode.trim(),
       images: images.map((image) => image.file),
     });
 
@@ -208,6 +256,12 @@ async function handleSavePet() {
   <FiSave className="text-xl" />
   {loadingSave ? "Salvando..." : "Salvar cadastro"}
 </button>
+
+{errorMessage && (
+  <div className="rounded-2xl bg-red-50 px-5 py-4 text-sm font-black text-red-700">
+    {errorMessage}
+  </div>
+)}
         </div>
 
         <form className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
@@ -244,12 +298,12 @@ async function handleSavePet() {
 
                 <label className="block md:col-span-2">
   <span className="mb-2 block text-sm font-black text-zinc-700">
-    Código de rastreio *
+    Código do Micro-chip:
   </span>
 
   <input
     type="text"
-    placeholder="Ex: RB-2026-0001, CHIP-123456..."
+    placeholder="Ex: 2026-0001..."
     value={trackingCode}
     onChange={(e) => setTrackingCode(e.target.value)}
     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
@@ -283,8 +337,8 @@ async function handleSavePet() {
                     onChange={(e) => setGender(e.target.value)}
                     className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-black text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
                   >
-                    <option value="prince">Príncipe</option>
-                    <option value="princess">Princesa</option>
+                    <option value="prince">Macho</option>
+                    <option value="princess">Fêmea</option>
                   </select>
                 </label>
 
@@ -303,18 +357,31 @@ async function handleSavePet() {
                   </select>
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-black text-zinc-700">
-                    Idade aproximada *
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Ex: 2 anos, 6 meses..."
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-base font-semibold text-zinc-800 outline-none transition focus:border-emerald-500 focus:bg-white"
-                  />
-                </label>
+                <div>
+  <label className="mb-2 block text-sm font-black text-emerald-950">
+    Idade aproximada *
+  </label>
+
+  <div className="grid gap-3 sm:grid-cols-[1fr_90px]">
+    <input
+      type="number"
+      min={1}
+      placeholder="Ex: 6"
+      value={ageValue}
+      onChange={(e) => setAgeValue(e.target.value)}
+      className="h-14 rounded-2xl border border-zinc-200 bg-white px-4 text-base font-black text-emerald-950 outline-none transition placeholder:text-zinc-400 focus:border-emerald-500"
+    />
+
+    <select
+      value={ageUnit}
+      onChange={(e) => setAgeUnit(e.target.value as "months" | "years")}
+      className="h-14 rounded-2xl border border-zinc-200 bg-white px-4 text-base font-black text-emerald-950 outline-none transition focus:border-emerald-500"
+    >
+      <option value="months">Meses</option>
+      <option value="years">Anos</option>
+    </select>
+  </div>
+</div>
 
                 <label className="block md:col-span-2">
                   <span className="mb-2 block text-sm font-black text-zinc-700">
@@ -542,51 +609,7 @@ async function handleSavePet() {
                         className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500"
                       />
 
-                      <label className="block">
-                        <span className="mb-2 block text-xs font-black text-zinc-500">
-                          Data da aplicação
-                        </span>
-                        <input
-                          type="date"
-                          value={vaccine.date}
-                          onChange={(e) =>
-                            updateVaccine(vaccine.id, "date", e.target.value)
-                          }
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500"
-                        />
-                      </label>
-
-                      <label className="block">
-                        <span className="mb-2 block text-xs font-black text-zinc-500">
-                          Próxima dose
-                        </span>
-                        <input
-                          type="date"
-                          value={vaccine.nextDoseDate}
-                          onChange={(e) =>
-                            updateVaccine(
-                              vaccine.id,
-                              "nextDoseDate",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500"
-                        />
-                      </label>
-
-                      <input
-                        type="text"
-                        placeholder="Veterinário ou responsável"
-                        value={vaccine.veterinarian}
-                        onChange={(e) =>
-                          updateVaccine(
-                            vaccine.id,
-                            "veterinarian",
-                            e.target.value
-                          )
-                        }
-                        className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-semibold outline-none transition focus:border-emerald-500 md:col-span-2"
-                      />
+                      
 
                       <textarea
                         placeholder="Observações da vacina..."
@@ -717,7 +740,7 @@ async function handleSavePet() {
                 <p>
                   Sexo:{" "}
                   <strong className="text-white">
-                    {gender === "prince" ? "Príncipe" : "Princesa"}
+                    {gender === "prince" ? "Macho" : "Fêmea"}
                   </strong>
                 </p>
 
@@ -735,7 +758,7 @@ async function handleSavePet() {
                 <p>
                   Idade:{" "}
                   <strong className="text-white">
-                    {age || "Não informada"}
+                    {formatPetAge() || "Não informada"}
                   </strong>
                 </p>
 
@@ -831,26 +854,10 @@ async function handleSavePet() {
                         </strong>
                       </p>
 
-                      <p>
-                        Data da aplicação:{" "}
-                        <strong className="text-zinc-800">
-                          {vaccine.date || "Não informada"}
-                        </strong>
-                      </p>
+                     
 
-                      <p>
-                        Próxima dose:{" "}
-                        <strong className="text-zinc-800">
-                          {vaccine.nextDoseDate || "Não informada"}
-                        </strong>
-                      </p>
+                      
 
-                      <p>
-                        Veterinário/responsável:{" "}
-                        <strong className="text-zinc-800">
-                          {vaccine.veterinarian || "Não informado"}
-                        </strong>
-                      </p>
 
                       <div>
                         <p>Observações:</p>
@@ -866,6 +873,15 @@ async function handleSavePet() {
           </aside>
         </form>
       </section>
+
+      {cropImageUrl && (
+  <ImageCropper
+    imageUrl={cropImageUrl}
+    fileName={cropFileName}
+    onCancel={handleCancelCrop}
+    onCropComplete={handleFinishCrop}
+  />
+)}
     </main>
   );
 }

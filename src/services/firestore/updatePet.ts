@@ -27,16 +27,28 @@ export type UpdatePetPayload = {
   vaccines: VaccineItemPayload[];
 
   existingImages: PetImage[];
-  newImages: File[];
+  newImages: {
+    id: string;
+    file: File;
+    previewUrl: string;
+    order: number;
+  }[];
 };
 
 async function uploadNewImages(
-  files: File[],
+  images: {
+    id: string;
+    file: File;
+    previewUrl: string;
+    order: number;
+  }[],
   collectionName: "dogs" | "cats",
   petId: string
 ) {
   const uploadedImages = await Promise.all(
-    files.map(async (file) => {
+    images.map(async (image) => {
+      const file = image.file;
+
       const imagePath = `${collectionName}/${petId}/${Date.now()}-${file.name}`;
       const imageRef = ref(storage, imagePath);
 
@@ -48,6 +60,7 @@ async function uploadNewImages(
         name: file.name,
         path: imagePath,
         url,
+        order: image.order,
       };
     })
   );
@@ -62,7 +75,9 @@ export async function updatePet(payload: UpdatePetPayload) {
     payload.petId
   );
 
-  const images = [...payload.existingImages, ...uploadedNewImages];
+  const images = [...payload.existingImages, ...uploadedNewImages].sort(
+    (a, b) => (a.order ?? 999) - (b.order ?? 999)
+  );
 
   const petRef = doc(db, payload.collectionName, payload.petId);
 
@@ -73,7 +88,7 @@ export async function updatePet(payload: UpdatePetPayload) {
     size: payload.size,
     age: payload.age,
     description: payload.description,
-     trackingCode: payload.trackingCode.trim(),
+    trackingCode: payload.trackingCode.trim(),
     status: payload.status,
     waitingSince: payload.waitingSince,
     castrated: payload.castrated,
@@ -92,13 +107,11 @@ export async function updatePet(payload: UpdatePetPayload) {
     hasVaccines: payload.vaccines.length > 0,
     vaccines: payload.vaccines,
     updatedAt: serverTimestamp(),
-   
   });
 
   return {
     petId: payload.petId,
     collectionName: payload.collectionName,
     vaccinationCardId: payload.vaccinationCardId,
-    
   };
 }

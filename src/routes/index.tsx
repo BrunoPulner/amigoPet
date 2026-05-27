@@ -17,6 +17,7 @@ import { ScrollToTop } from "../components/scrollToTop";
 import { Admin } from "../pages/admin";
 import { NewPet } from "../pages/admin/newPet";
 import { EditPet } from "../pages/admin/editPet";
+import { Microchips } from "../pages/admin/microchips";
 
 function Private({
   children,
@@ -75,6 +76,15 @@ export function AppRoutes() {
               </Private>
             }
           />
+
+          <Route
+  path="/admin/microchips"
+  element={
+    <Private>
+      <Microchips />
+    </Private>
+  }
+/>
 
           <Route
             path="/admin/pets/new"

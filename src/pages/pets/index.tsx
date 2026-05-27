@@ -14,7 +14,7 @@ function getSpeciesLabel(species: Pet["species"]) {
 }
 
 function getGenderLabel(gender: Pet["gender"]) {
-  return gender === "prince" ? "Príncipe" : "Princesa";
+  return gender === "prince" ? "Macho" : "Fêmea";
 }
 
 function getSizeLabel(size: Pet["size"]) {
@@ -234,7 +234,14 @@ export function Pets() {
         ) : (
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPets.map((pet, index) => {
-              const mainImage = pet.images?.[0]?.url;
+              const sortedImages = [...(pet.images ?? [])].sort(
+  (a, b) => (a.order ?? 999) - (b.order ?? 999)
+);
+
+const mainImage =
+  sortedImages[0]?.thumbnailUrl ||
+  sortedImages[0]?.mediumUrl ||
+  sortedImages[0]?.url;
 
               return (
                 <Link
@@ -245,34 +252,36 @@ export function Pets() {
                   }}
                   className="group animate-text-reveal overflow-hidden rounded-[2rem] bg-white shadow-xl shadow-emerald-900/5 transition hover:-translate-y-1 hover:shadow-2xl"
                 >
-                  <div className="relative h-72 overflow-hidden bg-zinc-100">
-                    {mainImage ? (
-                      <img
-                        src={mainImage}
-                        alt={pet.name}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-5xl">
-                        🐾
-                      </div>
-                    )}
+                  <div className="relative flex h-72 items-center justify-center overflow-hidden bg-zinc-100">
+  {mainImage ? (
+    <img
+  src={mainImage}
+  alt={pet.name}
+  loading="lazy"
+  decoding="async"
+  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+/>
+  ) : (
+    <div className="flex h-full items-center justify-center text-5xl">
+      🐾
+    </div>
+  )}
 
-                    <div className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-2 text-xs font-black text-emerald-700 shadow">
-                      {getSpeciesLabel(pet.species)}
-                    </div>
+  <div className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-2 text-xs font-black text-emerald-700 shadow">
+    {getSpeciesLabel(pet.species)}
+  </div>
 
-                    <div className="absolute right-4 top-4 rounded-full bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow">
-                      {getStatusLabel(pet.status)}
-                    </div>
+  <div className="absolute right-4 top-4 rounded-full bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow">
+    {getStatusLabel(pet.status)}
+  </div>
 
-                    {pet.featured && (
-                      <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white shadow">
-                        <FiHeart />
-                        Destaque
-                      </div>
-                    )}
-                  </div>
+  {pet.featured && (
+    <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white shadow">
+      <FiHeart />
+      Destaque
+    </div>
+  )}
+</div>
 
                   <div className="p-5">
                     <h2 className="text-2xl font-black text-emerald-950">
@@ -293,7 +302,7 @@ export function Pets() {
                       </span>
 
                       <span className="rounded-2xl bg-zinc-50 px-3 py-2 text-center text-xs font-black text-zinc-700">
-                        {pet.age} aninhos
+                        {pet.age}
                       </span>
 
                       <span className="rounded-2xl bg-zinc-50 px-3 py-2 text-center text-xs font-black text-zinc-700">

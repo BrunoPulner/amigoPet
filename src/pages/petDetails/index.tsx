@@ -23,7 +23,7 @@ function getSpeciesLabel(species: Pet["species"]) {
 }
 
 function getGenderLabel(gender: Pet["gender"]) {
-  return gender === "prince" ? "Príncipe" : "Princesa";
+    return gender === "prince" ? "Macho" : "Fêmea";
 }
 
 function getSizeLabel(size: Pet["size"]) {
@@ -89,7 +89,9 @@ const handleNextImage = useCallback(() => {
 
         setPet(data.pet);
         setVaccinationCard(data.vaccinationCard);
-        setSelectedImage(data.pet.images?.[0]?.url ?? "");
+        setSelectedImage(
+  data.pet.images?.[0]?.mediumUrl || data.pet.images?.[0]?.url || ""
+);
       } catch (error) {
         console.log(error);
       } finally {
@@ -193,10 +195,12 @@ const handleNextImage = useCallback(() => {
                     aria-label="Abrir imagem em tela cheia"
                   >
                     <img
-                      src={selectedImage}
-                      alt={pet.name}
-                      className="h-[520px] w-full object-cover"
-                    />
+  src={selectedImage}
+  alt={pet.name}
+  loading="eager"
+  decoding="async"
+  className="h-[520px] w-full object-cover"
+/>
                   </button>
                 ) : (
                   <div className="flex h-[520px] items-center justify-center text-7xl">
@@ -222,7 +226,7 @@ const handleNextImage = useCallback(() => {
                     <button
                       key={image.path}
                       type="button"
-                      onClick={() => setSelectedImage(image.url)}
+                      onClick={() => setSelectedImage(image.mediumUrl || image.url)}
                       onDoubleClick={() => openFullscreen(index)}
                       className={`overflow-hidden rounded-2xl border-4 transition ${
                         selectedImage === image.url
@@ -231,10 +235,12 @@ const handleNextImage = useCallback(() => {
                       }`}
                     >
                       <img
-                        src={image.url}
-                        alt={image.name}
-                        className="h-28 w-full object-cover"
-                      />
+  src={image.thumbnailUrl || image.mediumUrl || image.url}
+  alt={image.name}
+  loading="lazy"
+  decoding="async"
+  className="h-28 w-full object-cover"
+/>
                     </button>
                   ))}
                 </div>
@@ -279,7 +285,7 @@ const handleNextImage = useCallback(() => {
                       Idade
                     </p>
                     <strong className="mt-1 block text-lg">
-                      {pet.age} aninhos
+                      {pet.age} 
                     </strong>
                   </div>
 
@@ -389,48 +395,27 @@ const handleNextImage = useCallback(() => {
                         </h3>
 
                         <div className="mt-4 space-y-2 text-sm font-semibold text-zinc-600">
-                          <p>
-                            Nome:{" "}
-                            <strong className="text-zinc-800">
-                              {vaccine.name || "Não informado"}
-                            </strong>
-                          </p>
+  <p>
+    Nome:{" "}
+    <strong className="text-zinc-800">
+      {vaccine.name || "Não informado"}
+    </strong>
+  </p>
 
-                          <p>
-                            Dose:{" "}
-                            <strong className="text-zinc-800">
-                              {vaccine.dose || "Não informada"}
-                            </strong>
-                          </p>
+  <p>
+    Dose:{" "}
+    <strong className="text-zinc-800">
+      {vaccine.dose || "Não informada"}
+    </strong>
+  </p>
 
-                          <p>
-                            Aplicação:{" "}
-                            <strong className="text-zinc-800">
-                              {vaccine.date || "Não informada"}
-                            </strong>
-                          </p>
-
-                          <p>
-                            Próxima dose:{" "}
-                            <strong className="text-zinc-800">
-                              {vaccine.nextDoseDate || "Não informada"}
-                            </strong>
-                          </p>
-
-                          <p>
-                            Responsável:{" "}
-                            <strong className="text-zinc-800">
-                              {vaccine.veterinarian || "Não informado"}
-                            </strong>
-                          </p>
-
-                          <p>
-                            Observações:{" "}
-                            <strong className="text-zinc-800">
-                              {vaccine.notes || "Nenhuma observação"}
-                            </strong>
-                          </p>
-                        </div>
+  <p>
+    Observações:{" "}
+    <strong className="text-zinc-800">
+      {vaccine.notes || "Nenhuma observação"}
+    </strong>
+  </p>
+</div>
                       </div>
                     ))}
                   </div>

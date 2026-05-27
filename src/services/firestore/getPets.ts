@@ -5,14 +5,23 @@ import { db } from "../firebaseConnection";
 export type PetImage = {
   name: string;
   path: string;
+
   url: string;
+
+  mediumPath?: string;
+  mediumUrl?: string;
+
+  thumbnailPath?: string;
+  thumbnailUrl?: string;
+
+  order?: number;
 };
 
 export type Pet = {
   id: string;
   name: string;
   species: "dog" | "cat";
-  gender: "prince" | "princess";
+  gender: "prince" | "princess",
   size: "small" | "medium" | "large";
   age: string;
   description: string;
