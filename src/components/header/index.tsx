@@ -59,7 +59,7 @@ export function Header() {
     }`;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-emerald-700/95 text-white shadow-lg backdrop-blur">
+    <header className="print-header sticky top-0 z-50 w-full border-b border-white/10 bg-emerald-700/95 text-white shadow-lg backdrop-blur">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Link
           to="/"
