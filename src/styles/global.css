@@ -85,3 +85,41 @@ body {
     color: white !important;
   }
 }
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  main {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 10px !important;
+  }
+
+  th,
+  td {
+    padding: 8px 6px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+}

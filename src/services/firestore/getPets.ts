@@ -21,7 +21,6 @@ export type Pet = {
   id: string;
   name: string;
   species: "dog" | "cat";
-  gender: "prince" | "princess",
   size: "small" | "medium" | "large";
   age: string;
   description: string;
